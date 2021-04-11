@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+</head>
+<body>
+    {% if successful %}
+    <h1>Login successful!</h1>
+    <p>You successfully logged in as {{ email }}.</p>
+    {% else %}
+    <h1>Login failed!</h1>
+    <p>Your login failed.</p>
+    <p>Reason: {{ reason }}</p>
+    {% endif %}
+</body>
+</html>
