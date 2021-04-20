@@ -157,3 +157,42 @@ async def get_current_user(session: str = Depends(cookie_sec)) -> uuid.UUID:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Invalid session!"
         )
+
+
+@router.get("/settings")
+async def view_settings_page(request: Request, _=Depends(get_current_user)):
+    return main.templates.TemplateResponse("settings.html", {"request": request})
+
+
+@router.post("/change_password")
+async def change_password(
+    request: Request,
+    user_uuid: uuid.UUID = Depends(get_current_user),
+    password: SecretStr = Form(...),
+    new_password: SecretStr = Form(...),
+    new_password_confirm: SecretStr = Form(...),
+):
+    if new_password == new_password_confirm:
+        try:
+            if user := await User.get(user_uuid):
+                ph.verify(user.user_password_hash, password.get_secret_value())
+                await user.update(
+                    user_password_hash=ph.hash(new_password.get_secret_value())
+                ).apply()
+                return main.templates.TemplateResponse(
+                    "settings_updated.html", {"request": request, "setting": "password"}
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found. That's strange and shouldn't be the case.",
+                )
+        except VerifyMismatchError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password."
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="New passwords don't match!",
+        )
