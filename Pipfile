@@ -17,6 +17,8 @@ psycopg2-binary = ">=2.8.6,<3"
 argon2-cffi = ">=20.1.0,<21"
 pyjwt = ">=2.0.1,<3"
 sqlalchemy = ">=1.2,<2"
+expiringdict = ">=1.2.1,<2"
+fido2 = ">=0.9.1,<1"
 
 [dev-packages]
 black = "*"
@@ -32,6 +34,14 @@ allow_prereleases = true
 
 [scripts]
 web = "uvicorn web.main:app --reload"
-lint = "pre-commit run --all-files"
+# The fido2 library only verifies origins with http*s* in the url. Therefore you have to
+# use an https connection. For testing you can just generate a self signed certificate
+# with the command below and then run ``pipenv run web_secure``
+# openssl req -x509 -out localhost.crt -keyout localhost.key \                                                                                                                                                                     ─╯
+#  -newkey rsa:2048 -nodes -sha256 \
+#  -subj '/CN=localhost' -extensions EXT -config <( \
+#   printf "[dn]\nCN=localhost\n[req]\ndistinguished_name = dn\n[EXT]\nsubjectAltName=DNS:localhost\nkeyUsage=digitalSignature\nextendedKeyUsage=serverAuth")
+web_secure = "uvicorn web.main:app --host localhost --reload --ssl-keyfile localhost.key --ssl-certfile localhost.crt"
+lint = "pre-commit run -all-files"
 precommit = "pre-commit install"
 migrations = "alembic upgrade head"

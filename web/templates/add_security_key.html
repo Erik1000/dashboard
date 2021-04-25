@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/static/cbor.js" type="text/javascript"></script>
+    <title>Add security key</title>
+</head>
+<body>
+    <h1>Adding security key ...</h1>
+    <noscript>
+        <b>You have to enable javascript to add a security key.</b>
+    </noscript>
+    <script>
+        fetch('/auth/webauthn/add/begin', {
+            method: 'POST',
+        }).then(function (response) {
+            if (response.ok) return response.arrayBuffer();
+            throw new Error('Error getting registration data!');
+        }).then(CBOR.decode).then(function (options) {
+            return navigator.credentials.create(options);
+        }).then(function (attestation) {
+            return fetch('/auth/webauthn/add/complete' + window.location.search, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/cbor'},
+                body: CBOR.encode({
+                    "attestationObject": new Uint8Array(attestation.response.attestationObject),
+                    "clientDataJSON": new Uint8Array(attestation.response.clientDataJSON),
+                })
+            });
+        }).then(function (response) {
+            var stat = response.ok ? 'successful' : 'unsuccessful';
+            alert('Registration ' + stat + ' More details in server log...');
+        }, function (reason) {
+            alert(reason);
+        }).then(function () {
+            window.location = '/auth/settings';
+        });
+    </script>
+</body>
+</html>

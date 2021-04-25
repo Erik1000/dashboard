@@ -3,28 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <title>Settings</title>
+    <script src="/static/cbor.js" type="text/javascript"></script>
 </head>
 <body>
-    <h1>Settings</h1>
-    <div>
-        <h2>Change password</h2>
-        <form action="/auth/change_password" method="post">
-            <label>Password
-                <input type="password" name="password" required>
+<h1>Settings</h1>
+<div>
+    <h2>Change password</h2>
+    <form action="/auth/change_password" method="post">
+        <label>Password
+            <input type="password" name="password" required>
+        </label>
+        <br>
+        <label>
+            New Password
+            <input type="password" name="new_password" required>
+        </label>
+        <br>
+        <label>
+            New Password Confirm
+            <input type="password" name="new_password_confirm" required>
+        </label>
+        <br>
+        <input type="submit" value="Change">
+    </form>
+</div>
+<div>
+   <h2>Security keys</h2>
+        <h3>Add a security key</h3>
+        <form method="get" action="/auth/webauthn/add/begin">
+            <label>Give your security key a nickname
+                <input type="text" name="security_key_nickname" required>
             </label>
-            <br>
-            <label>
-                New Password
-                <input type="password" name="new_password" required>
-            </label>
-            <br>
-            <label>
-                New Password Confirm
-                <input type="password" name="new_password_confirm" required>
-            </label>
-            <br>
-            <input type="submit" value="Change">
+            <input type="submit" value="Add">
         </form>
-    </div>
+        <h3>Added security keys:</h3>
+        {% for security_key in security_keys %}
+            <form method="post" action="/auth/webauthn/remove">
+                <label>Name
+                    <input type="text" value="{{ security_key.nickname }}" readonly>
+                </label>
+                <br>
+                <label>Credential ID
+                    <input type="text" name="security_key" value="{{ security_key.as_hex(security_key.credential_id) }}" readonly>
+                </label>
+                <input type="submit" value="Remove">
+                <br>
+            </form>
+        {% endfor %}
+</div>
 </body>
 </html>
