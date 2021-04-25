@@ -42,6 +42,6 @@ web = "uvicorn web.main:app --reload"
 #  -subj '/CN=localhost' -extensions EXT -config <( \
 #   printf "[dn]\nCN=localhost\n[req]\ndistinguished_name = dn\n[EXT]\nsubjectAltName=DNS:localhost\nkeyUsage=digitalSignature\nextendedKeyUsage=serverAuth")
 web_secure = "uvicorn web.main:app --host localhost --reload --ssl-keyfile localhost.key --ssl-certfile localhost.crt"
-lint = "pre-commit run -all-files"
+lint = "pre-commit run --all-files"
 precommit = "pre-commit install"
 migrations = "alembic upgrade head"
