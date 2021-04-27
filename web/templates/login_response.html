@@ -5,13 +5,13 @@
     <title>Login</title>
 </head>
 <body>
-    {% if successful %}
+{% if successful %}
     <h1>Login successful!</h1>
     <p>You successfully logged in as {{ email }}.</p>
-    {% else %}
+{% else %}
     <h1>Login failed!</h1>
     <p>Your login failed.</p>
     <p>Reason: {{ reason }}</p>
-    {% endif %}
+{% endif %}
 </body>
 </html>

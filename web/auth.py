@@ -1,5 +1,6 @@
 import binascii
 import uuid
+from datetime import datetime, timedelta
 
 import jwt
 from argon2 import PasswordHasher
@@ -18,6 +19,7 @@ from pydantic import EmailStr, SecretStr
 from . import config, main
 from .db.schema import User, WebAuthnEntry
 
+# the api router which will be later registered in the main file
 router = APIRouter()
 
 # the cookie used to store the session token
@@ -26,8 +28,10 @@ cookie_sec = APIKeyCookie(name="session")
 # Used to store the state while doing webauthn
 webauthn_state = APIKeyCookie(name="_state", auto_error=True)
 
+# argon2 password hasher and verifier
 ph = PasswordHasher()
 
+# webauthn
 rp = PublicKeyCredentialRpEntity(config.WEBAUTHN_RP_ID, config.WEBAUTHN_RP_NAME)
 fido2server = Fido2Server(rp)
 
@@ -69,7 +73,10 @@ async def login(
 
                 # create a session token. Sessions are only validated by their signature
                 token = jwt.encode(
-                    {"sub": str(user.user_uuid)},
+                    {
+                        "sub": str(user.user_uuid),
+                        "exp": datetime.utcnow() + timedelta(weeks=1),
+                    },
                     key=config.SESSION_SECRET.get_secret_value(),
                     algorithm="HS256",
                 )
@@ -237,6 +244,13 @@ async def change_password(
         )
 
 
+@router.get("/auth/logout")
+async def logout(request: Request, _=Depends(get_current_user)):
+    response = main.templates.TemplateResponse("logged_out.html", {"request": request})
+    response.delete_cookie("session")
+    return response
+
+
 # render the page which then executes the javascript to add a new webauthn credential.
 @router.get("/webauthn/add/begin", response_class=HTMLResponse)
 async def view_begin_webauthn_page(
@@ -289,7 +303,7 @@ async def begin_webauthn(
     response = Response(
         content=cbor.encode(registration_data), media_type="application/cbor"
     )
-
+    state.update({"exp": datetime.utcnow() + timedelta(minutes=5)})
     # set the state parameter as a signed cookie
     response.set_cookie(
         "_state",
@@ -439,4 +453,102 @@ async def remove_security_key(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Failed to parse credential id.",
+        )
+
+
+# render the page which will then execute the javascript
+@router.get("/webauthn/auth/begin", response_class=HTMLResponse)
+async def render_passwordless_login(request: Request):
+    return main.templates.TemplateResponse(
+        "passwordless_login.html", {"request": request}
+    )
+
+
+# begin passwordless authentication
+@router.post("/webauthn/auth/begin", response_class=Response)
+async def begin_authentication():
+    # let the fido2 library generate the things for us
+    auth_data, state = fido2server.authenticate_begin(user_verification="required")
+    state.update({"exp": datetime.utcnow() + timedelta(minutes=5)})
+
+    # create the response
+    response = Response(content=cbor.encode(auth_data), media_type="application/cbor")
+
+    # set the state parameter as a signed cookie
+    response.set_cookie(
+        "_state",
+        jwt.encode(state, config.SESSION_SECRET.get_secret_value(), algorithm="HS256"),
+    )
+
+    return response
+
+
+# confirm the assertion and get the current user
+@router.post("/webauthn/auth/complete")
+async def complete_authentication(request: Request, _state=Depends(webauthn_state)):
+    try:
+        # decode the request's body
+        data = cbor.decode(await request.body())
+        credential_id = data["credentialId"]
+        client_data = ClientData(data["clientDataJSON"])
+        auth_data = AuthenticatorData(data["authenticatorData"])
+        signature = data["signature"]
+
+        # the user uuid saved on the authenticator device
+        user_uuid = uuid.UUID(data["userHandle"].decode("utf-8"))
+
+        # try to get the user from the database
+        user: User = await User.get(user_uuid)
+
+        # if the user is not in the database, he does not exist.
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User does not exist!",
+            )
+        try:
+            # parse the state parameter and verify signature
+            state = jwt.decode(
+                _state,
+                config.SESSION_SECRET.get_secret_value(),
+                algorithms=["HS256"],
+            )
+        except jwt.PyJWTError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Warning: Invalid state parameter!",
+            )
+        else:
+            # give the parameters to the fido2 library to verify them
+            fido2server.authenticate_complete(
+                state,
+                # get the registered credentials of the user
+                User.get_webauthn_credentials(user.webauthn_credentials),
+                credential_id,
+                client_data,
+                auth_data,
+                signature,
+            )
+            # create a session token. Sessions are only validated by their signature
+            token = jwt.encode(
+                {
+                    "sub": str(user.user_uuid),
+                    "exp": datetime.utcnow() + timedelta(weeks=1),
+                },
+                key=config.SESSION_SECRET.get_secret_value(),
+                algorithm="HS256",
+            )
+            response = Response(
+                content=cbor.encode({"status": "OK"}),
+                media_type="application/cbor",
+            )
+            # set the session token
+            response.set_cookie("session", token)
+            # remove the state parameter because it's not longer needed
+            response.delete_cookie("_state")
+            return response
+    except (ValueError, KeyError):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Received invalid data!",
         )

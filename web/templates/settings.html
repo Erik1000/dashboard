@@ -28,28 +28,34 @@
     </form>
 </div>
 <div>
-   <h2>Security keys</h2>
-        <h3>Add a security key</h3>
-        <form method="get" action="/auth/webauthn/add/begin">
-            <label>Give your security key a nickname
-                <input type="text" name="security_key_nickname" required>
+    <h2>Security keys</h2>
+    <h3>Add a security key</h3>
+    <form method="get" action="/auth/webauthn/add/begin">
+        <label>Give your security key a nickname
+            <input type="text" name="security_key_nickname" required>
+        </label>
+        <input type="submit" value="Add">
+    </form>
+    <h3>Added security keys:</h3>
+    {% for security_key in security_keys %}
+        <form method="post" action="/auth/webauthn/remove">
+            <label>Name
+                <input type="text" value="{{ security_key.nickname }}" readonly>
             </label>
-            <input type="submit" value="Add">
+            <br>
+            <label>Credential ID
+                <input type="text" name="security_key"
+                       value="{{ security_key.as_hex(security_key.credential_id) }}"
+                       readonly>
+            </label>
+            <input type="submit" value="Remove">
+            <br>
         </form>
-        <h3>Added security keys:</h3>
-        {% for security_key in security_keys %}
-            <form method="post" action="/auth/webauthn/remove">
-                <label>Name
-                    <input type="text" value="{{ security_key.nickname }}" readonly>
-                </label>
-                <br>
-                <label>Credential ID
-                    <input type="text" name="security_key" value="{{ security_key.as_hex(security_key.credential_id) }}" readonly>
-                </label>
-                <input type="submit" value="Remove">
-                <br>
-            </form>
-        {% endfor %}
+    {% endfor %}
+    <br>
+    <form method="post" action="/auth/logout">
+        <input type="submit" value="Logout">
+    </form>
 </div>
 </body>
 </html>

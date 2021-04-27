@@ -17,10 +17,17 @@ app.include_router(auth.router, prefix="/auth")
 app.mount("/static", StaticFiles(directory="web/static"), name="static")
 
 
-# render some example page if authenticated
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request, uuid=Depends(get_current_user)):
-    return templates.TemplateResponse("index.html", {"request": request, "uuid": uuid})
+async def root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+
+# render some example page if authenticated
+@app.get("/logged_in", response_class=HTMLResponse)
+async def root_logged_in(request: Request, user_uuid=Depends(get_current_user)):
+    return templates.TemplateResponse(
+        "index_logged_in.html", {"request": request, "uuid": user_uuid}
+    )
 
 
 @app.on_event("startup")

@@ -5,13 +5,13 @@
     <title>Register</title>
 </head>
 <body>
-    {% if successful %}
+{% if successful %}
     <h1>Successful!</h1>
     <p>You successfully registered as {{ email }}.</p>
-    {% else %}
+{% else %}
     <h1>Failed!</h1>
     <p>Your registration as {{ email }} failed.</p>
     <p>Reason: {{ reason }}</p>
-    {% endif %}
+{% endif %}
 </body>
 </html>
