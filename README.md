@@ -21,6 +21,8 @@ To install the project you need to have [pipenv](https://github.com/pypa/pipenv)
 
 To run the server with the self signed certificates (make sure they are named localhost.key and localhost.crt), type ``pipenv run web_secure``.
 
+**Note**: Firefox somehow has a bug when a PIN is required for the security key. Firefox will not ask for the PIN and nothing will happen if you touch you key. You are welcome to open a bug report about this at the [firefox bugtracker](https://bugzilla.mozilla.org/home). This example is tested on Chrome (probably every chromium based browser) and Safari.
+
 Don't forget to setup your ``.env`` file. Simply copy the ``env.example`` and put in your own data.
 
 After that run ``pipenv run migrations`` to setup the tables etc.
