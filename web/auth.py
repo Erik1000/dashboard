@@ -251,16 +251,6 @@ async def logout(request: Request, _=Depends(get_current_user)):
     return response
 
 
-# render the page which then executes the javascript to add a new webauthn credential.
-@router.get("/webauthn/add/begin", response_class=HTMLResponse)
-async def view_begin_webauthn_page(
-    request: Request, _: uuid.UUID = Depends(get_current_user)
-):
-    return main.templates.TemplateResponse(
-        "add_security_key.html", {"request": request}
-    )
-
-
 # See https://webauthn.guide/#registration
 # At the beginning the client requests it's credential options from the server.
 # This example uses the Webauthn part of the ``fido2`` library. This library has no good

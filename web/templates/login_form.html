@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Login</title>
+    <script src="/static/cbor.js" type="text/javascript"></script>
 </head>
 <body>
 <h1>Login:</h1>
@@ -18,6 +19,39 @@
     <br>
     <input type="submit" value="Submit">
 </form>
-<a href="/auth/webauthn/auth/begin">Use passwordless login</a>
+<a href="#" onclick="triggerWebauthn()">Use passwordless login</a>
+<script>
+    function triggerWebauthn() {
+        fetch('/auth/webauthn/auth/begin', {
+            method: 'POST',
+        }).then(function (response) {
+            console.log(response)
+            if (response.ok) return response.arrayBuffer();
+            throw new Error('No credential available to authenticate!');
+        }).then(CBOR.decode).then(function (options) {
+            return navigator.credentials.get(options);
+        }).then(function (assertion) {
+            console.log(assertion.response)
+            return fetch('/auth/webauthn/auth/complete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/cbor'},
+                body: CBOR.encode({
+                    "credentialId": new Uint8Array(assertion.rawId),
+                    "authenticatorData": new Uint8Array(assertion.response.authenticatorData),
+                    "clientDataJSON": new Uint8Array(assertion.response.clientDataJSON),
+                    "signature": new Uint8Array(assertion.response.signature),
+                    "userHandle": new Uint8Array(assertion.response.userHandle)
+                })
+            })
+        }).then(function (response) {
+            const stat = response.ok ? 'successful' : 'unsuccessful';
+            alert('Authentication ' + stat + ' More details in server log...');
+        }, function (reason) {
+            alert(reason);
+        }).then(function () {
+            window.location = '/logged_in';
+        });
+    }
+</script>
 </body>
 </html>

@@ -30,11 +30,11 @@
 <div>
     <h2>Security keys</h2>
     <h3>Add a security key</h3>
-    <form method="get" action="/auth/webauthn/add/begin">
+    <form method="get" action="#">
         <label>Give your security key a nickname
-            <input type="text" name="security_key_nickname" required>
+            <input type="text" value="Unknown key" id="nickname" name="security_key_nickname" required>
         </label>
-        <input type="submit" value="Add">
+        <input type="button" onclick="triggerWebauthn()" value="Add">
     </form>
     <h3>Added security keys:</h3>
     {% for security_key in security_keys %}
@@ -57,5 +57,37 @@
         <input type="submit" value="Logout">
     </form>
 </div>
+<script>
+    function triggerWebauthn() {
+        if (!document.getElementById("nickname").value) {
+            console.error("nickname is required")
+            return
+        }
+        fetch('/auth/webauthn/add/begin', {
+            method: 'POST',
+        }).then(function (response) {
+            if (response.ok) return response.arrayBuffer();
+            throw new Error('Error getting registration data!');
+        }).then(CBOR.decode).then(function (options) {
+            return navigator.credentials.create(options);
+        }).then(function (attestation) {
+            return fetch('/auth/webauthn/add/complete?security_key_nickname=' + document.getElementById("nickname").value, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/cbor'},
+                body: CBOR.encode({
+                    "attestationObject": new Uint8Array(attestation.response.attestationObject),
+                    "clientDataJSON": new Uint8Array(attestation.response.clientDataJSON),
+                })
+            });
+        }).then(function (response) {
+            const stat = response.ok ? 'successful' : 'unsuccessful';
+            alert('Registration ' + stat + ' More details in server log...');
+        }, function (reason) {
+            alert(reason);
+        }).then(function () {
+            window.location = '/auth/settings';
+        });
+    }
+</script>
 </body>
 </html>
