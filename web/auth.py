@@ -244,7 +244,7 @@ async def change_password(
         )
 
 
-@router.get("/logout")
+@router.post("/logout")
 async def logout(request: Request, _=Depends(get_current_user)):
     response = main.templates.TemplateResponse("logged_out.html", {"request": request})
     response.delete_cookie("session")
