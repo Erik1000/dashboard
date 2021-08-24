@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-fastapi = ">=0.63.0,<1"
+fastapi = ">=0.68.0,<1"
 uvicorn = {version = ">=0.13.3,<1", extras = ["standard"]}
 jinja2 = ">=2.11.3,<3"
 aiofiles = ">=0.6.0,<1"
